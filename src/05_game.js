@@ -558,6 +558,7 @@ addEventListener('keydown', e => {
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyK') input.dashQ = true;
     if (e.code === 'KeyE' || e.code === 'KeyL') input.throwQ = true;
   }
+  if (!$('donate').hidden) { if (e.code === 'Escape') closeDonate(); return; }
   if (e.code === 'Escape' || e.code === 'KeyP') { if (S.mode === 'playing') pauseGame(); else if (S.mode === 'paused') resumeGame(); }
   if (e.code === 'KeyM') toggleMute();
   if ((e.code === 'Enter' || e.code === 'Space') && (S.mode === 'menu' || S.mode === 'over') && document.activeElement?.tagName !== 'BUTTON') startGame();
@@ -594,6 +595,32 @@ $('btnPauseMute').addEventListener('click', toggleMute);
 $('btnMotion').addEventListener('click', toggleMotion);
 $('btnPauseMotion').addEventListener('click', toggleMotion);
 
+
+/* ================= DONATE ================= */
+let donateFrom = null;
+function openDonate(from) {
+  donateFrom = from;
+  if (from === 'hud' && S.mode === 'playing') pauseGame();
+  $('pause').hidden = true;
+  $('donate').hidden = false;
+  $('btnDonateClose').textContent = from === 'start' ? 'VÀO GAME' : from === 'pause' ? 'QUAY LẠI' : 'CHƠI TIẾP';
+  setTimeout(() => $('btnDonateClose').focus(), 30);
+}
+function closeDonate() {
+  $('donate').hidden = true;
+  if (donateFrom === 'hud') resumeGame();
+  else if (donateFrom === 'pause') $('pause').hidden = false;
+  donateFrom = null;
+}
+$('btnDonateHud').addEventListener('click', () => { AUDIO.play('click'); openDonate('hud'); });
+$('btnPauseDonate').addEventListener('click', () => { AUDIO.play('click'); openDonate('pause'); });
+$('btnDonateClose').addEventListener('click', () => { AUDIO.play('click'); closeDonate(); });
+$('btnCopyAcct').addEventListener('click', () => {
+  const t = $('acctNo').textContent, b = $('btnCopyAcct');
+  const ok = () => { b.textContent = 'Đã sao chép ✓'; setTimeout(() => b.textContent = 'Sao chép số tài khoản', 1800); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('acctNo')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); b.textContent = 'Đã bôi đen, hãy bấm Copy'; };
+  try { navigator.clipboard.writeText(t).then(ok, fallback); } catch (e) { fallback(); }
+});
 /* ================= LOOP ================= */
 let last = performance.now();
 function frame(now) {
@@ -618,7 +645,9 @@ function frame(now) {
 function boot() {
   resize(); buildItems(); syncToggles();
   resetWorld(true);
-  if (/[?&]debug/.test(location.search)) window.__dapa = { S, get player() { return player; }, get rioters() { return rioters; }, get cops() { return cops; }, get props() { return props; }, get vehicles() { return vehicles; }, get route() { return route; }, keys, input, startGame, crowdWin, policeWin, startBattle };
+  if (/[?&]debug/.test(location.search)) window.__dapa = { S, get player() { return player; }, get rioters() { return rioters; }, get cops() { return cops; }, get props() { return props; }, get vehicles() { return vehicles; }, get route() { return route; }, keys, input, run: src => eval(src), startGame, crowdWin, policeWin, startBattle };
+  let seen = false; try { seen = sessionStorage.getItem('dapa_donate') === '1'; sessionStorage.setItem('dapa_donate', '1'); } catch (e) {}
+  if (!seen) openDonate('start');
   requestAnimationFrame(t => { last = t; frame(t); });
 }
 const fontReady = (document.fonts && document.fonts.load) ? Promise.all([document.fonts.load('10px VT323'), document.fonts.load('10px Silkscreen')]) : Promise.resolve();

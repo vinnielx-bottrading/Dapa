@@ -87,6 +87,12 @@ Màn kết thúc là **phiên tòa**: bản án châm biếm theo danh hiệu, k
 
 Hiệu ứng âm thanh gồm "boing" khi đập trúng cảnh sát, tiếng huýt sáo trượt, kèn trombone buồn khi bị bắt, chuông xe đạp, còi cảnh sát và tiếng ợ khi uống bia.
 
+### Ủng hộ tác giả
+- Lần đầu mở game (mỗi phiên trình duyệt): hiện bảng **Ủng hộ DAPA** với mã VietQR Vietcombank, số tài khoản và nút sao chép.
+- Khi đang chơi: nút nhỏ **♥ Ủng hộ** ở góc phải trên. Bấm vào thì game tạm dừng, đóng bảng là chơi tiếp.
+- Khi tạm dừng: nút **♥ ỦNG HỘ TÁC GIẢ** nằm ngay dưới nút Tiếp tục.
+- Ảnh QR nhúng sẵn trong `src/shell.html` (base64). File gốc ở `assets/qr.webp`.
+
 ## Điều khiển
 
 | Hành động | Bàn phím / chuột | Cảm ứng |
