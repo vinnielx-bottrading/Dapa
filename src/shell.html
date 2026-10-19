@@ -1,0 +1,234 @@
+<title>DAPA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&display=swap">
+<style>
+/* Layout: full-bleed pixel canvas; HUD pinned to the safe-area edges; menus are centered pixel panels over the live riot */
+:root{
+  --ink:#16121c; --ink-2:#231c2c; --ink-3:#33293f;
+  --paper:#f4ecd8; --dim:#a99fb9;
+  --hot:#ff7a1a; --hot-dk:#a8460c;
+  --red:#ff3b4f; --blue:#3b7bff; --gold:#ffd23f; --mint:#5fe0a8; --beer:#f2b636;
+  --f-display:'Silkscreen','VT323',ui-monospace,monospace;
+  --f-body:'VT323',ui-monospace,'Courier New',monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--ink);color:var(--paper);font-family:var(--f-body);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+#wrap{position:fixed;inset:0;overflow:hidden;background:var(--ink)}
+#game{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+button{font-family:var(--f-body);cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* HUD */
+#hud{position:absolute;left:0;right:0;top:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:10px;
+  padding:calc(8px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px));
+  pointer-events:none;line-height:1;text-shadow:0 2px 0 #000,2px 0 0 #000,-2px 0 0 #000,0 -2px 0 #000;font-size:20px}
+#hud *{white-space:nowrap}
+.hud-l{display:flex;flex-direction:column;gap:5px;min-width:0}
+.lbl{font-size:15px;color:var(--dim);letter-spacing:2px}
+.score{font-family:var(--f-display);font-size:24px;font-variant-numeric:tabular-nums}
+#combo{font-family:var(--f-display);color:var(--gold);font-size:16px;opacity:0;transition:opacity .15s}
+#combo.on{opacity:1}
+#comboBar{height:3px;background:var(--gold);width:0;margin-top:3px;box-shadow:0 2px 0 #000}
+.stam{display:flex;align-items:center;gap:6px}
+.bar{width:110px;height:7px;background:#000;box-shadow:0 0 0 1px #000;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--mint)}
+.bar i.low{background:var(--red)}
+.hud-c{display:flex;flex-direction:column;align-items:center;gap:4px}
+#phase{font-size:18px;letter-spacing:2px;color:var(--gold)}
+.tug{display:flex;align-items:center;gap:6px;font-size:18px;font-variant-numeric:tabular-nums}
+.tug b{font-weight:400}
+.tug .c{color:var(--hot)} .tug .p{color:#8fb4ff}
+.tugbar{width:150px;height:8px;background:#2f5fd0;box-shadow:0 0 0 2px #000;position:relative;overflow:hidden}
+.tugbar i{position:absolute;left:0;top:0;bottom:0;width:50%;background:var(--hot);transition:width .25s}
+.tugbar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:#fff;opacity:.6}
+#blockLbl{font-size:15px;color:var(--dim);letter-spacing:1px}
+.hud-r{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.hud-btns{display:flex;gap:6px;pointer-events:auto}
+.ibtn{width:34px;height:34px;border:2px solid #000;background:var(--ink-2);color:var(--paper);font-size:19px;line-height:1;box-shadow:0 3px 0 #000;display:grid;place-items:center;padding:0;text-shadow:none}
+.ibtn:active{transform:translateY(2px);box-shadow:0 1px 0 #000}
+.ibtn.off{color:var(--dim)}
+.fine{font-family:var(--f-display);font-size:20px;color:var(--red);font-variant-numeric:tabular-nums}
+#tier{font-size:16px;color:var(--paper);letter-spacing:1px}
+#tier.t3,#tier.t4{color:var(--gold)}
+
+#toast{position:absolute;left:50%;top:calc(96px + env(safe-area-inset-top,0px));transform:translateX(-50%);max-width:min(92vw,600px);width:max-content;
+  background:var(--ink);border:2px solid #000;box-shadow:0 0 0 2px var(--hot),0 4px 0 2px #000;padding:6px 12px;font-size:20px;text-align:center;
+  pointer-events:none;opacity:0;transition:opacity .2s;line-height:1.1}
+#toast.on{opacity:1}
+#toast b{color:var(--gold);font-weight:400}
+#toast.beer{box-shadow:0 0 0 2px var(--beer),0 4px 0 2px #000}
+#toast.cop{box-shadow:0 0 0 2px var(--blue),0 4px 0 2px #000}
+#hint{position:absolute;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-size:20px;width:max-content;max-width:calc(100% - 32px);
+  text-shadow:0 2px 0 #000;pointer-events:none;text-align:center;opacity:0;transition:opacity .3s}
+#hint.on{opacity:1}
+@media (orientation:portrait){#hint.touch{bottom:auto;top:calc(178px + env(safe-area-inset-top,0px));font-size:17px}}
+#hint.touch{font-size:17px}
+#hint kbd{font-family:var(--f-body);background:var(--paper);color:var(--ink);padding:0 5px;box-shadow:0 2px 0 #000;margin:0 2px}
+
+#struggle{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+#struggle p{margin:0 0 6px;font-family:var(--f-display);font-size:22px;color:var(--gold);text-shadow:3px 3px 0 #000;animation:shakeX .12s steps(2) infinite}
+#struggle .bar{width:220px;height:12px;margin:0 auto;box-shadow:0 0 0 3px #000}
+#struggle .bar i{background:var(--gold);width:0}
+#struggle small{display:block;margin-top:6px;font-size:18px;text-shadow:0 2px 0 #000}
+@keyframes shakeX{50%{transform:translateX(3px)}}
+
+/* Touch */
+#touch{position:absolute;inset:0;pointer-events:none}
+#stickZone{position:absolute;left:0;bottom:0;width:50%;height:62%;pointer-events:auto}
+#stick{position:absolute;width:104px;height:104px;margin:-52px 0 0 -52px;border-radius:50%;background:rgba(22,18,28,.45);box-shadow:0 0 0 3px rgba(0,0,0,.6),inset 0 0 0 2px rgba(244,236,216,.25);pointer-events:none}
+#knob{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:var(--paper);box-shadow:0 3px 0 #000;opacity:.85}
+.tbtn{position:absolute;pointer-events:auto;border:3px solid #000;color:var(--ink);letter-spacing:1px;border-radius:50%;box-shadow:0 5px 0 #000;display:grid;place-items:center;padding:0;font-size:18px}
+.tbtn:active,.tbtn.down{transform:translateY(3px);box-shadow:0 2px 0 #000}
+#btnHit{width:86px;height:86px;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(40px + env(safe-area-inset-bottom,0px));background:var(--hot);font-size:24px}
+#btnDash{width:60px;height:60px;right:calc(118px + env(safe-area-inset-right,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));background:var(--mint)}
+#btnThrow{width:60px;height:60px;right:calc(34px + env(safe-area-inset-right,0px));bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--gold)}
+.tbtn.cd{filter:grayscale(1) brightness(.7)}
+
+/* Overlays */
+.overlay{position:absolute;inset:0;display:grid;place-items:center;overflow-y:auto;
+  padding-block:calc(16px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:rgba(22,18,28,.5);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
+.panel{width:min(100%,560px);background:var(--ink);border:3px solid #000;box-shadow:0 0 0 3px var(--ink-3),0 8px 0 3px #000;padding:20px 22px 18px;display:flex;flex-direction:column;gap:12px;text-align:center}
+.logo{margin:0;font-family:var(--f-display);font-weight:700;font-size:clamp(60px,17vw,108px);line-height:.9;letter-spacing:4px;color:var(--hot);text-shadow:4px 4px 0 var(--hot-dk),8px 8px 0 #000}
+.logo span{display:inline-block;animation:wob 2.4s steps(2) infinite}
+.logo span:nth-child(2){animation-delay:.3s}.logo span:nth-child(3){animation-delay:.6s}.logo span:nth-child(4){animation-delay:.9s}
+@keyframes wob{0%,80%{transform:none}90%{transform:translateY(-4px) rotate(-3deg)}}
+.tag{margin:0;font-size:21px;letter-spacing:3px;color:var(--gold)}
+.premise{margin:0;font-size:20px;line-height:1.15;text-wrap:balance}
+.premise em{font-style:normal;color:var(--mint)}
+.btn{border:3px solid #000;background:var(--paper);color:var(--ink);font-size:24px;letter-spacing:2px;padding:10px 16px;box-shadow:0 5px 0 #000}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #000}
+.btn.primary{background:var(--hot);font-size:30px;padding:11px 16px}
+.btn.small{font-size:18px;padding:6px 10px;background:var(--ink-2);color:var(--paper);box-shadow:0 3px 0 #000;letter-spacing:1px}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;text-align:left;font-size:18px;color:var(--dim);background:var(--ink-2);padding:10px 12px;border:2px solid #000;line-height:1.12}
+.controls b{color:var(--paper);font-weight:400}
+.controls h3{margin:0 0 3px;font-weight:400;font-size:16px;letter-spacing:2px;color:var(--gold)}
+.loop{margin:0;font-size:18px;color:var(--dim);line-height:1.15;text-wrap:balance}
+.loop b{color:var(--paper);font-weight:400}
+.best{margin:0;font-size:18px;color:var(--dim)}
+.best b{color:var(--gold);font-weight:400;font-family:var(--f-display);font-size:15px}
+.fineprint{margin:0;font-size:15px;color:var(--dim);opacity:.85}
+.court{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,9vw,52px);color:var(--red);text-shadow:4px 4px 0 #000;line-height:1;margin:0}
+.court small{display:block;font-family:var(--f-body);font-weight:400;font-size:18px;color:var(--dim);letter-spacing:3px;text-shadow:none;margin-bottom:6px}
+.verdict{margin:0;font-size:21px;line-height:1.15;text-wrap:balance;background:#f4ecd8;color:#2a1f2e;padding:10px 12px;border:2px solid #000;box-shadow:inset 0 0 0 2px #c9b98f}
+.verdict b{font-weight:400;color:#a8202c}
+.stats{display:grid;grid-template-columns:1fr auto;gap:3px 12px;text-align:left;font-size:19px;background:var(--ink-2);border:2px solid #000;padding:10px 12px;margin:0}
+.stats dt{color:var(--dim)}
+.stats dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.stats dd.big{font-family:var(--f-display);color:var(--gold);font-size:17px}
+.stats dd.red{font-family:var(--f-display);color:var(--red);font-size:17px}
+.newbest{color:var(--gold);animation:blink .6s steps(1) infinite}
+@keyframes blink{50%{opacity:.35}}
+@media (max-width:620px){
+  #hud{font-size:16px;grid-template-columns:1fr auto;gap:6px}
+  .hud-c{grid-column:1 / -1;grid-row:2;justify-self:center}
+  .score{font-size:18px} .fine{font-size:15px} .lbl{display:none}
+  .bar{width:80px} .tugbar{width:120px} #tier{font-size:14px}
+  #phase{font-size:15px} .tug{font-size:15px}
+  #toast{font-size:17px;top:calc(110px + env(safe-area-inset-top,0px))}
+  .controls{grid-template-columns:1fr;font-size:17px}
+  .panel{padding:16px 14px 14px;gap:10px}
+}
+@media (max-height:500px){
+  #hud{font-size:15px} .score{font-size:16px} .fine{font-size:14px} .lbl{display:none} .bar{width:70px} .tugbar{width:110px} #phase,.tug{font-size:14px} #blockLbl{display:none}
+  #toast{font-size:15px;top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));max-width:52vw}
+  #hint{bottom:auto;top:calc(70px + env(safe-area-inset-top,0px));font-size:15px}
+  .ibtn{width:30px;height:30px}
+}
+@media (prefers-reduced-motion:reduce){.logo span,#struggle p{animation:none}}
+</style>
+
+<div id="wrap">
+  <canvas id="game" aria-label="Đường phố Saint-Paperasse"></canvas>
+
+  <div id="hud" hidden>
+    <div class="hud-l">
+      <div><span class="lbl">ĐIỂM HỖN LOẠN</span><div class="score" id="score">0</div></div>
+      <div class="stam"><span class="lbl" style="letter-spacing:1px">SỨC</span><div class="bar"><i id="stamBar"></i></div></div>
+      <div id="combo">COMBO <span id="comboX">x2</span><div id="comboBar"></div></div>
+    </div>
+    <div class="hud-c">
+      <div id="phase">ĐANG TUẦN HÀNH</div>
+      <div class="tug"><b class="c" id="crowdN">0</b><div class="tugbar"><i id="tugBar"></i></div><b class="p" id="copN">0</b></div>
+      <div id="blockLbl">Khúc phố 1</div>
+    </div>
+    <div class="hud-r">
+      <div class="hud-btns">
+        <button class="ibtn" id="btnPause" aria-label="Tạm dừng">II</button>
+        <button class="ibtn" id="btnMute" aria-label="Bật/tắt âm thanh">♪</button>
+      </div>
+      <div class="fine" id="fine">€0</div>
+      <div id="tier">Du khách tò mò</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <div id="hint"></div>
+  <div id="struggle" hidden><p>BỊ TÓM! BẤM LIÊN TỤC!</p><div class="bar"><i id="strugBar"></i></div><small id="strugTip">Space / ĐẬP thật nhanh để vùng ra</small></div>
+
+  <div id="touch" hidden>
+    <div id="stickZone"></div>
+    <div id="stick"><div id="knob"></div></div>
+    <button class="tbtn" id="btnThrow" aria-label="Ném">NÉM</button>
+    <button class="tbtn" id="btnDash" aria-label="Lướt">LƯỚT</button>
+    <button class="tbtn" id="btnHit" aria-label="Đập">ĐẬP</button>
+  </div>
+
+  <section id="menu" class="overlay">
+    <div class="panel">
+      <h1 class="logo" aria-label="DAPA"><span>D</span><span>A</span><span>P</span><span>A</span></h1>
+      <p class="tag">ĐẬP · PHÁ · NHẬU · BỊ TÓM</p>
+      <p class="premise">Bạn là du khách đội nón bảo hiểm, lạc vào cuộc bạo loạn vì… giờ nghỉ trưa ở <em>Saint-Paperasse</em>. Phá cùng đám đông, đập cảnh sát, nhậu mừng chiến thắng. Càng quậy, tiền phạt càng cao.</p>
+      <button class="btn primary" id="btnPlay">XUỐNG ĐƯỜNG</button>
+      <div class="controls">
+        <div><h3>BÀN PHÍM</h3><b>WASD / mũi tên</b> di chuyển<br><b>Space / J / Click</b> đập<br><b>E / L / chuột phải</b> ném cà chua, đá trả lựu đạn cay<br><b>Shift / K</b> lướt né<br><b>P / Esc</b> tạm dừng · <b>M</b> tắt tiếng</div>
+        <div><h3>CẢM ỨNG</h3><b>Kéo nửa trái</b> để đi<br><b>ĐẬP</b> giữ để đập liên tục<br><b>NÉM</b> ném đồ, đá trả lựu đạn<br><b>LƯỚT</b> thoát vòng vây<br>Bị tóm: <b>bấm ĐẬP liên tục</b></div>
+      </div>
+      <p class="loop"><b>Đám đông thắng</b> một đợt: kéo nhau đi nhậu, hồi sức, giảm tiền phạt, mở khúc phố mới. <b>Cảnh sát thắng</b>: họ càn quét, bạn phải sống sót. Chơi vô tận, cho tới khi bạn bị áp giải.</p>
+      <div class="row">
+        <button class="btn small" id="btnMenuMute">Âm thanh: BẬT</button>
+        <button class="btn small" id="btnMotion">Rung màn hình: BẬT</button>
+      </div>
+      <p class="best">Kỷ lục: <b id="bestMenu">0</b></p>
+      <p class="fineprint">Trò chơi trào phúng. Saint-Paperasse, mọi nhân vật, cơ quan và thương hiệu đều hư cấu. Bạo lực kiểu hoạt hình, không máu me.</p>
+    </div>
+  </section>
+
+  <section id="pause" class="overlay" hidden>
+    <div class="panel">
+      <h2 class="court" style="color:var(--gold)">TẠM DỪNG</h2>
+      <p class="premise">Cả hai phe đều đang nghỉ giải lao 45 phút theo luật lao động.</p>
+      <button class="btn primary" id="btnResume">TIẾP TỤC</button>
+      <div class="row">
+        <button class="btn small" id="btnRestart">Chơi lại từ đầu</button>
+        <button class="btn small" id="btnPauseMute">Âm thanh: BẬT</button>
+        <button class="btn small" id="btnPauseMotion">Rung: BẬT</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="over" class="overlay" hidden>
+    <div class="panel">
+      <h2 class="court"><small>TÒA ÁN SƠ THẨM SAINT-PAPERASSE</small>BẢN ÁN</h2>
+      <p class="verdict" id="verdict">…</p>
+      <dl class="stats">
+        <dt>Tổng tiền phạt</dt><dd class="red" id="oFine">€0</dd>
+        <dt>Điểm hỗn loạn</dt><dd class="big" id="oScore">0</dd>
+        <dt>Khúc phố đã chiếm</dt><dd id="oBlocks">0</dd>
+        <dt>Đợt cảnh sát đã trải qua</dt><dd id="oWaves">0</dd>
+        <dt>Cảnh sát bị đập choáng</dt><dd id="oKO">0</dd>
+        <dt>Xe bị lật</dt><dd id="oFlips">0</dd>
+        <dt>Đồ đã phá</dt><dd id="oBroken">0</dd>
+        <dt>Thời gian ngoài đường</dt><dd id="oTime">0:00</dd>
+        <dt>Kỷ lục điểm</dt><dd id="oBest">0</dd>
+      </dl>
+      <p class="tag" id="oTier" style="color:var(--mint)">Danh hiệu</p>
+      <button class="btn primary" id="btnAgain">XUỐNG ĐƯỜNG LẦN NỮA</button>
+    </div>
+  </section>
+</div>
